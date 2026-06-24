@@ -28,7 +28,8 @@
 
 set -euo pipefail
 
-VAULT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/resolve-vault.sh"
 META_DIR="${VAULT_ROOT}/.vault-meta"
 OUTPUT_FILE="${META_DIR}/transport.json"
 STALE_AFTER_DAYS=7
@@ -106,11 +107,27 @@ PYEOF
 fi
 
 # ── Freshness check: skip detection if snapshot is recent ────────────────────
+# A fresh snapshot is only reused if its baked vault_root still matches the
+# vault the resolver picked this run. After switching the active vault (env var
+# or bin/use-vault.sh), a stale-but-recent snapshot would otherwise hand back the
+# previous vault's root — so on mismatch we fall through and rewrite.
 if [ "$MODE" = "write" ] && [ -f "$OUTPUT_FILE" ]; then
   if find "$OUTPUT_FILE" -mtime -${STALE_AFTER_DAYS} -print 2>/dev/null | grep -q .; then
-    log "transport.json is fresh (<${STALE_AFTER_DAYS}d). Use --force to refresh."
-    cat "$OUTPUT_FILE"
-    exit 0
+    CACHED_VAULT_ROOT="$(python3 - "$OUTPUT_FILE" 2>/dev/null <<'PYEOF'
+import json, sys
+try:
+    with open(sys.argv[1]) as fh:
+        print(json.load(fh).get("vault_root", ""))
+except Exception:
+    pass
+PYEOF
+)"
+    if [ "$CACHED_VAULT_ROOT" = "$VAULT_ROOT" ]; then
+      log "transport.json is fresh (<${STALE_AFTER_DAYS}d). Use --force to refresh."
+      cat "$OUTPUT_FILE"
+      exit 0
+    fi
+    log "transport.json vault_root (${CACHED_VAULT_ROOT}) != active vault (${VAULT_ROOT}); re-resolving."
   fi
 fi
 

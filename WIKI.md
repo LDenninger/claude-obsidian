@@ -55,13 +55,27 @@ If no package manager is available, tell the user: "Download Obsidian from https
 
 ### 0.2 Vault Location
 
-Ask for the vault path or use the default:
+The vault location is resolved through one explicit, switchable chain (most-specific wins) rather than being baked into script paths:
 
 ```
-VAULT_PATH=~/Documents/Obsidian Vault
+$CLAUDE_OBSIDIAN_VAULT              # env var — per-session override
+  → ~/.claude/claude-obsidian-vault  # pointer file — the switchable "active vault"
+  → cwd containing a wiki/ folder    # today's behavior
+  → the install location             # zero-config default
 ```
 
-Verify: `ls "$VAULT_PATH/.obsidian" 2>/dev/null`
+All scripts obtain the vault by sourcing the shared resolver (`scripts/resolve-vault.sh` for shell, `resolve_vault()` in `scripts/resolve_vault.py` for Python), so zero-config installs keep working unchanged.
+
+Switch or inspect the active vault with the switch command:
+
+```bash
+bash bin/use-vault.sh /path/to/vault   # switch the active vault (writes the pointer file)
+bash bin/use-vault.sh                   # show the currently active vault
+```
+
+This is how you run multiple vaults ("use vault X now, vault Y later"): point at one, work, then point at another. A per-session `$CLAUDE_OBSIDIAN_VAULT` env var overrides the pointer without changing it.
+
+Verify a vault directory: `ls "$VAULT/.obsidian" 2>/dev/null`
 
 ### 0.3 Install the Local REST API Plugin
 

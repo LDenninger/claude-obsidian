@@ -55,7 +55,9 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-VAULT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # make sibling helpers importable under any loader
+from resolve_vault import resolve_vault
+VAULT_ROOT = resolve_vault(Path(__file__).resolve().parent.parent)
 META_DIR = VAULT_ROOT / ".vault-meta"
 EMBED_CACHE_PATH = META_DIR / "embed-cache.json"
 CACHE_LOCK = META_DIR / ".embed-cache.lock"

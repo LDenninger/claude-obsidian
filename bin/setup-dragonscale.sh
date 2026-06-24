@@ -15,7 +15,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VAULT="${1:-$(dirname "$SCRIPT_DIR")}"
+RESOLVE_VAULT_ARG="${1:-}"
+source "$SCRIPT_DIR/../scripts/resolve-vault.sh"
 
 echo "Setting up DragonScale Memory at: $VAULT"
 cd "$VAULT"

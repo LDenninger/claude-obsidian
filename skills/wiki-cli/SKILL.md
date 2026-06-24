@@ -63,6 +63,8 @@ bash scripts/detect-transport.sh --force
 
 Each recipe shows the CLI form first. If the CLI is unavailable per the detection snapshot, fall through to the noted fallback. Variable substitution: `$VAULT` is the absolute vault root; `$NOTE` is a vault-relative path like `wiki/concepts/Foo.md`.
 
+`$VAULT` is obtained canonically by sourcing the shared resolver — `source scripts/resolve-vault.sh` (shell) or `resolve_vault()` from `scripts/resolve_vault.py` (Python). The resolver applies the chain: `$CLAUDE_OBSIDIAN_VAULT` env var → the `~/.claude/claude-obsidian-vault` pointer file (set with `bash bin/use-vault.sh /path/to/vault`) → a `wiki/` folder in the current directory → the install location. Switch the active vault with `bash bin/use-vault.sh`; do not hardcode the path.
+
 ### Read a note
 ```bash
 # CLI

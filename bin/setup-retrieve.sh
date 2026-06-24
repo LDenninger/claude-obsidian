@@ -39,7 +39,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VAULT="$(dirname "$SCRIPT_DIR")"
+source "$SCRIPT_DIR/../scripts/resolve-vault.sh"
 META="$VAULT/.vault-meta"
 
 NO_LLM=false

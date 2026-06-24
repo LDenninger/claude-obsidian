@@ -14,7 +14,7 @@
           },
           {
             "type": "prompt",
-            "prompt": "If a vault is configured for this session (check CLAUDE.md for VAULT_PATH or a wiki/ folder in the current directory), silently read wiki/hot.md to restore recent context. If wiki/hot.md does not exist, do nothing. This is a non-vault session. Do not announce this. Do not report what you read. Just have the context available."
+            "prompt": "If a vault is configured for this session, silently read wiki/hot.md from it to restore recent context. Resolve the active vault in this order: the $CLAUDE_OBSIDIAN_VAULT env var, then the ~/.claude/claude-obsidian-vault pointer file (written by bin/use-vault.sh), then CLAUDE.md's VAULT_PATH, then a wiki/ folder in the current directory. If wiki/hot.md does not exist, do nothing. This is a non-vault session. Do not announce this. Do not report what you read. Just have the context available."
           }
         ]
       }

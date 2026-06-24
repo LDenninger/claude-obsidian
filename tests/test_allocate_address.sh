@@ -11,6 +11,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VAULT_ROOT="$(dirname "$SCRIPT_DIR")"
 ALLOC="$VAULT_ROOT/scripts/allocate-address.sh"
+RESOLVER="$VAULT_ROOT/scripts/resolve-vault.sh"
 
 PASS=0
 FAIL=0
@@ -30,8 +31,12 @@ trap 'rm -rf "$TMP"' EXIT
 
 mkdir -p "$TMP/scripts" "$TMP/wiki"
 cp "$ALLOC" "$TMP/scripts/allocate-address.sh"
+cp "$RESOLVER" "$TMP/scripts/resolve-vault.sh"   # allocate-address.sh now sources the shared resolver
 chmod +x "$TMP/scripts/allocate-address.sh"
 cd "$TMP"
+# Pin the active vault to this sandbox so the resolver is deterministic regardless
+# of any ~/.claude/claude-obsidian-vault pointer on the developer's machine.
+export CLAUDE_OBSIDIAN_VAULT="$TMP"
 
 # --- Test 1: rebuild on empty vault = 1 ---
 OUT=$(./scripts/allocate-address.sh --rebuild 2>&1)

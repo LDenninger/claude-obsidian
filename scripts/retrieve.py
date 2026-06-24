@@ -55,8 +55,11 @@ import json
 import sys
 from pathlib import Path
 
-VAULT_ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS_DIR = VAULT_ROOT / "scripts"
+SCRIPTS_DIR = Path(__file__).resolve().parent          # sibling code lives at the install location
+sys.path.insert(0, str(SCRIPTS_DIR))                   # make sibling helpers importable under any loader
+from resolve_vault import resolve_vault
+
+VAULT_ROOT = resolve_vault(SCRIPTS_DIR.parent)         # data lives at the active vault
 META_DIR = VAULT_ROOT / ".vault-meta"
 CHUNKS_DIR = META_DIR / "chunks"
 BM25_INDEX = META_DIR / "bm25" / "index.json"

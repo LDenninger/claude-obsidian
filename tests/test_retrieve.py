@@ -149,15 +149,20 @@ def test_retrieve_exits_10_without_index():
         (sandbox / ".vault-meta").mkdir()
         # Copy retrieve.py and its dependencies into the sandbox
         import shutil
-        for f in ["retrieve.py", "bm25-index.py", "rerank.py"]:
+        for f in ["retrieve.py", "bm25-index.py", "rerank.py", "resolve_vault.py"]:
             shutil.copy(ROOT / "scripts" / f, sandbox / "scripts" / f)
             os.chmod(sandbox / "scripts" / f, 0o755)
+        # Pin the active vault to the sandbox so the resolver doesn't fall through
+        # to a wiki/-containing cwd or a developer's ~/.claude pointer file.
+        env = os.environ.copy()
+        env["CLAUDE_OBSIDIAN_VAULT"] = str(sandbox)
         # Run retrieve.py — should exit 10 because no bm25 index exists
         result = subprocess.run(
             [sys.executable, str(sandbox / "scripts" / "retrieve.py"), "test query"],
             capture_output=True,
             text=True,
             timeout=10,
+            env=env,
         )
         assert_eq("retrieve.py exit 10 when not provisioned", 10, result.returncode)
         assert_true("retrieve.py prints friendly error",
@@ -179,9 +184,13 @@ def test_end_to_end_with_synthetic_chunks():
         bm25_dir.mkdir(parents=True)
         # Copy scripts
         import shutil
-        for f in ["retrieve.py", "bm25-index.py", "rerank.py"]:
+        for f in ["retrieve.py", "bm25-index.py", "rerank.py", "resolve_vault.py"]:
             shutil.copy(ROOT / "scripts" / f, sandbox / "scripts" / f)
             os.chmod(sandbox / "scripts" / f, 0o755)
+        # Pin the active vault to the sandbox (the resolver would otherwise fall
+        # through to a wiki/-containing cwd or a developer's ~/.claude pointer).
+        env = os.environ.copy()
+        env["CLAUDE_OBSIDIAN_VAULT"] = str(sandbox)
         # Write 2 synthetic chunks
         def chunk(addr, idx, text):
             return {
@@ -204,18 +213,17 @@ def test_end_to_end_with_synthetic_chunks():
             json.dumps(chunk("c-000001", 0, "compounding wiki vault pattern by karpathy")))
         (chunks_dir / "c-000002" / "chunk-000.json").write_text(
             json.dumps(chunk("c-000002", 0, "obsidian cli transport detection")))
-        # Build index via subprocess (uses the sandbox's META_DIR? no — it uses the
-        # script's hard-coded paths relative to its location. Since we copied the
-        # script into sandbox/scripts/, VAULT_ROOT will compute to `sandbox`.)
+        # Build index via subprocess. VAULT_ROOT resolves to `sandbox` via the
+        # pinned CLAUDE_OBSIDIAN_VAULT env var above.
         result = subprocess.run(
             [sys.executable, str(sandbox / "scripts" / "bm25-index.py"), "build"],
-            capture_output=True, text=True, timeout=10)
+            capture_output=True, text=True, timeout=10, env=env)
         assert_eq("bm25 build rc=0", 0, result.returncode)
         # Run retrieve
         result = subprocess.run(
             [sys.executable, str(sandbox / "scripts" / "retrieve.py"),
              "karpathy wiki", "--top", "2", "--no-rerank"],
-            capture_output=True, text=True, timeout=10)
+            capture_output=True, text=True, timeout=10, env=env)
         assert_eq("retrieve rc=0", 0, result.returncode)
         out = json.loads(result.stdout)
         assert_eq("retrieve.strategy is bm25-only", "bm25-only", out["strategy"])
@@ -238,9 +246,11 @@ def test_explain_flag_adds_diagnostics_block():
         chunks_dir.mkdir(parents=True)
         bm25_dir.mkdir(parents=True)
         import shutil
-        for f in ["retrieve.py", "bm25-index.py", "rerank.py"]:
+        for f in ["retrieve.py", "bm25-index.py", "rerank.py", "resolve_vault.py"]:
             shutil.copy(ROOT / "scripts" / f, sandbox / "scripts" / f)
             os.chmod(sandbox / "scripts" / f, 0o755)
+        env = os.environ.copy()
+        env["CLAUDE_OBSIDIAN_VAULT"] = str(sandbox)   # pin resolver to the sandbox
         # 2 synthetic chunks
         (chunks_dir / "c-000010").mkdir()
         (chunks_dir / "c-000010" / "chunk-000.json").write_text(json.dumps({
@@ -256,12 +266,12 @@ def test_explain_flag_adds_diagnostics_block():
         }))
         # Build index
         subprocess.run([sys.executable, str(sandbox / "scripts" / "bm25-index.py"), "build"],
-                       capture_output=True, timeout=10, check=True)
+                       capture_output=True, timeout=10, check=True, env=env)
         # Run with --explain --no-rerank
         result = subprocess.run(
             [sys.executable, str(sandbox / "scripts" / "retrieve.py"),
              "hybrid", "--top", "1", "--no-rerank", "--explain"],
-            capture_output=True, text=True, timeout=10)
+            capture_output=True, text=True, timeout=10, env=env)
         assert_eq("retrieve --explain --no-rerank rc=0", 0, result.returncode)
         out = json.loads(result.stdout)
         assert_true("--explain produces 'explain' key",
@@ -284,9 +294,11 @@ def test_no_rerank_flag_strategy_bm25_only():
         chunks_dir.mkdir(parents=True)
         bm25_dir.mkdir(parents=True)
         import shutil
-        for f in ["retrieve.py", "bm25-index.py", "rerank.py"]:
+        for f in ["retrieve.py", "bm25-index.py", "rerank.py", "resolve_vault.py"]:
             shutil.copy(ROOT / "scripts" / f, sandbox / "scripts" / f)
             os.chmod(sandbox / "scripts" / f, 0o755)
+        env = os.environ.copy()
+        env["CLAUDE_OBSIDIAN_VAULT"] = str(sandbox)   # pin resolver to the sandbox
         (chunks_dir / "c-000020").mkdir()
         (chunks_dir / "c-000020" / "chunk-000.json").write_text(json.dumps({
             "schema_version": 1, "page_path": "wiki/fake/c-000020.md",
@@ -300,11 +312,11 @@ def test_no_rerank_flag_strategy_bm25_only():
             "created_at": "2026-05-17T00:00:00Z",
         }))
         subprocess.run([sys.executable, str(sandbox / "scripts" / "bm25-index.py"), "build"],
-                       capture_output=True, timeout=10, check=True)
+                       capture_output=True, timeout=10, check=True, env=env)
         result = subprocess.run(
             [sys.executable, str(sandbox / "scripts" / "retrieve.py"),
              "transport", "--top", "1", "--no-rerank"],
-            capture_output=True, text=True, timeout=10)
+            capture_output=True, text=True, timeout=10, env=env)
         assert_eq("retrieve --no-rerank rc=0", 0, result.returncode)
         out = json.loads(result.stdout)
         assert_eq("--no-rerank sets strategy='bm25-only'", "bm25-only", out.get("strategy"))

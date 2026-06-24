@@ -41,7 +41,9 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-VAULT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # make sibling helpers importable under any loader
+from resolve_vault import resolve_vault
+VAULT_ROOT = resolve_vault(Path(__file__).resolve().parent.parent)
 WIKI_DIR = VAULT_ROOT / "wiki"
 HOT_PATH = WIKI_DIR / "hot.md"
 INDEX_PATH = WIKI_DIR / "index.md"

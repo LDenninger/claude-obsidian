@@ -19,7 +19,8 @@
 
 set -euo pipefail
 
-VAULT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/resolve-vault.sh"
 COUNTER_FILE="${VAULT_ROOT}/.vault-meta/address-counter.txt"
 LOCK_FILE="${VAULT_ROOT}/.vault-meta/.address.lock"
 WIKI_DIR="${VAULT_ROOT}/wiki"
